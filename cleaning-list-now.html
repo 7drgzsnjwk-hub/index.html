@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tidy Cycle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E7ECE6;
+    --card:#FCFDFB;
+    --ink:#22302A;
+    --ink-soft:#5C6B62;
+    --line:#D7DED5;
+    --teal:#2E6F6A;
+    --teal-deep:#1F524E;
+    --amber:#DE9A34;
+    --red:#C1503F;
+    --green:#5C8F63;
+    --shadow: 0 1px 2px rgba(34,48,42,0.06), 0 4px 14px rgba(34,48,42,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    padding:20px 16px 100px;
+  }
+  header{
+    padding:8px 4px 18px;
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:30px;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+  .tabs{
+    display:flex;
+    gap:6px;
+    background:#DEE5DA;
+    padding:4px;
+    border-radius:12px;
+    margin-bottom:18px;
+  }
+  .tab{
+    flex:1;
+    border:none;
+    background:transparent;
+    padding:9px 6px;
+    border-radius:9px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transition:background .15s, color .15s;
+  }
+  .tab.active{
+    background:var(--card);
+    color:var(--teal-deep);
+    box-shadow:var(--shadow);
+  }
+  .count-pill{
+    display:inline-block;
+    min-width:16px;
+    margin-left:4px;
+    font-size:11px;
+    opacity:.75;
+  }
+  .empty{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--ink-soft);
+  }
+  .empty .glyph{font-size:34px; margin-bottom:8px;}
+  .task{
+    background:var(--card);
+    border-radius:14px;
+    padding:13px 14px;
+    margin-bottom:10px;
+    box-shadow:var(--shadow);
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .check{
+    flex:none;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    border:2px solid var(--teal);
+    background:transparent;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    transition:background .15s, transform .1s;
+  }
+  .check:active{transform:scale(0.9);}
+  .check svg{width:14px;height:14px;stroke:var(--card);stroke-width:3;fill:none;opacity:0;transition:opacity .1s;}
+  .task.done .check{background:var(--teal);}
+  .task.done .check svg{opacity:1;}
+  .gauge{
+    flex:none;
+    width:34px;
+    height:34px;
+    position:relative;
+  }
+  .gauge svg{transform:rotate(-90deg);}
+  .gauge circle{fill:none; stroke-width:3.5;}
+  .gauge .track{stroke:#E2E7DE;}
+  .gauge .fill{stroke-linecap:round; transition:stroke-dashoffset .2s;}
+  .body{flex:1; min-width:0;}
+  .name{
+    font-weight:600;
+    font-size:15px;
+    line-height:1.25;
+  }
+  .meta{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+    display:flex;
+    gap:6px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .status{font-weight:600;}
+  .status.overdue{color:var(--red);}
+  .status.today{color:var(--amber);}
+  .status.ok{color:var(--ink-soft);}
+  .actions{
+    flex:none;
+    display:flex;
+    gap:2px;
+  }
+  .icon-btn{
+    width:30px;
+    height:30px;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .icon-btn:active{background:var(--line);}
+  .icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;}
+
+  .edit-panel{
+    background:#F2F5EF;
+    border-radius:12px;
+    padding:12px;
+    margin-top:8px;
+  }
+  .field{margin-bottom:10px;}
+  .field label{
+    display:block;
+    font-size:11.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:4px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:9px 10px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    background:var(--card);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .freq-row{display:flex; gap:8px;}
+  .freq-row .field{flex:1; margin-bottom:0;}
+  .row-btns{display:flex; gap:8px; margin-top:12px;}
+  .btn{
+    flex:1;
+    padding:10px;
+    border-radius:9px;
+    border:none;
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .btn-primary{background:var(--teal); color:#fff;}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line);}
+  .btn-danger{background:transparent; color:var(--red);}
+
+  .fab{
+    position:fixed;
+    bottom:22px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(488px, calc(100% - 32px));
+    background:var(--teal-deep);
+    color:#fff;
+    border:none;
+    border-radius:14px;
+    padding:14px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    cursor:pointer;
+    box-shadow:0 6px 20px rgba(31,82,78,0.35);
+  }
+  .fab svg{width:18px;height:18px;stroke:#fff;stroke-width:2.5;fill:none;}
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(20,28,24,0.4);
+    display:flex; align-items:flex-end;
+    z-index:20;
+  }
+  .sheet{
+    background:var(--bg);
+    width:100%;
+    max-width:520px;
+    margin:0 auto;
+    border-radius:20px 20px 0 0;
+    padding:20px 18px calc(24px + env(safe-area-inset-bottom));
+  }
+  .sheet h2{
+    font-family:'Fraunces',serif;
+    font-size:20px;
+    margin:0 0 14px;
+  }
+  .loading{text-align:center; padding:60px 0; color:var(--ink-soft); font-size:14px;}
+  .date-header{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--teal-deep);
+    margin:18px 2px 8px;
+  }
+  .date-header:first-child{margin-top:0;}
+  .backup-bar{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    margin:6px 0 4px;
+  }
+  .backup-link{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:12px;
+    text-decoration:underline;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .backup-textarea{
+    width:100%;
+    height:140px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    padding:10px;
+    font-family:monospace;
+    font-size:11.5px;
+    resize:vertical;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="loading" id="loading">Loading your list…</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'cleaning-tasks-v5';
+let tasks = [];
+let view = 'today';
+let editingId = null;
+let addOpen = false;
+
+const todayStr = () => new Date().toISOString().slice(0,10);
+const addDays = (dateStr, n) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+};
+const daysBetween = (a,b) => Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+
+function seedTasks(){
+  const t = todayStr();
+  const defs = [
+    ['Clean toilets',14,2],
+    ['Clean master bathroom sink',30,5],
+    ['Clean master shower',90,3],
+    ['Clean windows',180,13],
+    ['Start dusting upstairs',30,7],
+    ['Finish dusting upstairs',30,8],
+    ['Dust basement',30,9],
+    ['Duster (fans, picture frames, blinds, TVs, vents, doorways, etc)',60,4],
+    ['Clean master tub',60,14],
+    ['Vacuum upstairs',30,11],
+    ['Mirrors',30,5],
+    ['Mop upstairs',60,24],
+    ['Vacuum basement',90,21],
+    ['Mop basement',90,39],
+    ['Spare bathroom sink',30,32],
+    ['Spare shower',180,43],
+    ['Glass doors (3)',30,14],
+    ['Vacuum & Wipe down couch',30,16],
+    ['Water orchid',7,1],
+    ['Water plants',14,9],
+    ['Vacuum & Wipe down pee boy couch',180,73],
+    ['Update calendar',35,17],
+    ['Clean coffee bar',7,1],
+    ['Wipe down wine fridge',30,18],
+    ['Change kitchen table cloth',30,21],
+    ['Wipe down fridge (inside & out)',30,23],
+    ['Kitchen backsplash',60,34],
+    ['Microwave',30,25],
+    ['Kitchen sink & disposal',30,28],
+    ['Clean vacuum',90,57],
+    ['Wipe down stove & dishwasher',30,30],
+    ['Wipe washing machine/dryer and clean filter',60,44],
+    ['Wipe down bar',90,75],
+    ['Clean basement shower',120,2],
+    ['Basement sink',60,54],
+    ['Wipe barstools',180,103],
+    ['Wipe door handles/light switches/outlets',180,133],
+    ['Wash bathroom/kitchen rugs',120,32],
+    ['Wash big rug',120,62],
+    ['Wipe/vacuum baseboards',180,163],
+    ['Change sheets',8,4],
+    ['Change Tage sheets',7,3],
+    ['Wash blankets',30,16],
+    ['Vacuum stairs',120,92],
+  ];
+  return defs.map(([name, freqDays, offset]) => {
+    const nextDue = addDays(t, offset);
+    return { id: cryptoId(), name, freqDays, lastDone: addDays(nextDue, -freqDays), nextDue };
+  });
+}
+function cryptoId(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+async function loadTasks(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      tasks = JSON.parse(raw);
+    } else {
+      tasks = seedTasks();
+      saveTasks();
+    }
+  } catch(e){
+    tasks = seedTasks();
+    try{ saveTasks(); } catch(e2){}
+  }
+  render();
+}
+function saveTasks(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    return true;
+  } catch(e){
+    console.error('Save failed', e);
+    return false;
+  }
+}
+
+function freqLabel(days){
+  if(days % 30 === 0 && days >= 30) return `Every ${days/30 === 1 ? '' : days/30 + ' '}month${days/30>1?'s':''}`;
+  if(days % 7 === 0 && days >= 7) return `Every ${days/7 === 1 ? '' : days/7 + ' '}week${days/7>1?'s':''}`;
+  return `Every ${days} day${days>1?'s':''}`;
+}
+function statusInfo(task){
+  const t = todayStr();
+  const d = daysBetween(t, task.nextDue);
+  if(d < 0) return {label:`Overdue ${Math.abs(d)}d`, cls:'overdue'};
+  if(d === 0) return {label:'Due today', cls:'today'};
+  if(d <= 2) return {label:`Due in ${d}d`, cls:'today'};
+  return {label:`Due in ${d}d`, cls:'ok'};
+}
+function formatDueDate(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function gaugePercent(task){
+  const t = todayStr();
+  const span = daysBetween(task.lastDone, task.nextDue);
+  if(span <= 0) return 1;
+  const elapsed = daysBetween(task.lastDone, t);
+  return Math.min(1, Math.max(0, elapsed/span));
+}
+function gaugeColor(task){
+  const t = todayStr();
+  if(daysBetween(t, task.nextDue) < 0) return 'var(--red)';
+  const p = gaugePercent(task);
+  if(p >= 0.85) return 'var(--amber)';
+  return 'var(--teal)';
+}
+
+function completeTask(id){
+  const task = tasks.find(x=>x.id===id);
+  if(!task) return;
+  const t = todayStr();
+  task.lastDone = t;
+  task.nextDue = addDays(t, task.freqDays);
+  saveTasks();
+  render();
+}
+function deleteTask(id){
+  tasks = tasks.filter(x=>x.id!==id);
+  editingId = null;
+  saveTasks();
+  render();
+}
+function saveEdit(id, name, freqDays, nextDue){
+  const task = tasks.find(x=>x.id===id);
+  if(!task) return;
+  task.name = name.trim() || task.name;
+  if(freqDays !== task.freqDays){
+    task.freqDays = freqDays;
+    task.nextDue = addDays(task.lastDone, freqDays);
+  }
+  if(nextDue) task.nextDue = nextDue;
+  editingId = null;
+  saveTasks();
+  render();
+}
+function addTask(name, freqDays, startDue){
+  const t = todayStr();
+  tasks.push({
+    id: cryptoId(),
+    name: name.trim(),
+    freqDays,
+    lastDone: addDays(startDue, -freqDays),
+    nextDue: startDue
+  });
+  addOpen = false;
+  saveTasks();
+  render();
+}
+
+function unitFromDays(days){
+  if(days % 30 === 0 && days >= 30) return {value: days/30, unit:'month'};
+  if(days % 7 === 0 && days >= 7) return {value: days/7, unit:'week'};
+  return {value: days, unit:'day'};
+}
+function daysFromUnit(value, unit){
+  value = Math.max(1, parseInt(value)||1);
+  if(unit==='month') return value*30;
+  if(unit==='week') return value*7;
+  return value;
+}
+
+function filteredTasks(){
+  const t = todayStr();
+  let list;
+  if(view==='today') list = tasks.filter(x => daysBetween(t, x.nextDue) <= 0);
+  else if(view==='soon') list = tasks.filter(x => daysBetween(t, x.nextDue) <= 14);
+  else list = tasks.slice();
+  return list.sort((a,b)=> a.nextDue.localeCompare(b.nextDue));
+}
+
+function iconCheck(){return `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;}
+function iconEdit(){return `<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;}
+function iconMove(){return `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;}
+function iconTrash(){return `<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`;}
+function iconPlus(){return `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;}
+
+function gaugeSvg(task){
+  const r = 13, c = 2*Math.PI*r;
+  const p = gaugePercent(task);
+  const offset = c * (1-p);
+  const color = gaugeColor(task);
+  return `<svg width="34" height="34" viewBox="0 0 34 34">
+    <circle class="track" cx="17" cy="17" r="${r}"></circle>
+    <circle class="fill" cx="17" cy="17" r="${r}" stroke="${color}" stroke-dasharray="${c}" stroke-dashoffset="${offset}"></circle>
+  </svg>`;
+}
+
+function renderTask(task){
+  const st = statusInfo(task);
+  const isEditing = editingId === task.id;
+  const {value, unit} = unitFromDays(task.freqDays);
+  let html = `<div class="task ${daysBetween(todayStr(),task.nextDue)<0 ? '' : ''}" data-id="${task.id}">
+    <button class="check" onclick="completeTask('${task.id}')" title="Mark done">${iconCheck()}</button>
+    <div class="gauge">${gaugeSvg(task)}</div>
+    <div class="body">
+      <div class="name">${escapeHtml(task.name)}</div>
+      <div class="meta">
+        <span class="status ${st.cls}">${st.label}</span>
+        <span>· ${freqLabel(task.freqDays)}</span>
+      </div>
+      ${isEditing ? renderEditPanel(task, value, unit) : ''}
+    </div>
+    ${!isEditing ? `<div class="actions">
+      <button class="icon-btn" onclick="openMove('${task.id}')" title="Change date">${iconMove()}</button>
+      <button class="icon-btn" onclick="openEdit('${task.id}')" title="Edit">${iconEdit()}</button>
+    </div>` : ''}
+  </div>`;
+  return html;
+}
+
+function groupHeaderLabel(dateStr){
+  const t = todayStr();
+  const d = daysBetween(t, dateStr);
+  const dow = formatDueDate(dateStr);
+  if(d < 0) return `${dow} · Overdue`;
+  if(d === 0) return `${dow} · Today`;
+  if(d === 1) return `${dow} · Tomorrow`;
+  return dow;
+}
+
+function renderEditPanel(task, value, unit){
+  return `<div class="edit-panel">
+    <div class="field">
+      <label>Task name</label>
+      <input type="text" id="edit-name-${task.id}" value="${escapeAttr(task.name)}">
+    </div>
+    <div class="freq-row">
+      <div class="field">
+        <label>Frequency</label>
+        <input type="number" min="1" id="edit-freqval-${task.id}" value="${value}">
+      </div>
+      <div class="field">
+        <label>Unit</label>
+        <select id="edit-frequnit-${task.id}">
+          <option value="day" ${unit==='day'?'selected':''}>Day(s)</option>
+          <option value="week" ${unit==='week'?'selected':''}>Week(s)</option>
+          <option value="month" ${unit==='month'?'selected':''}>Month(s)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Next due date</label>
+      <input type="date" id="edit-due-${task.id}" value="${task.nextDue}">
+    </div>
+    <div class="row-btns">
+      <button class="btn btn-primary" onclick="submitEdit('${task.id}')">Save</button>
+      <button class="btn btn-ghost" onclick="cancelEdit()">Cancel</button>
+      <button class="btn btn-danger" onclick="deleteTask('${task.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+function openEdit(id){ editingId = id; render(); }
+function cancelEdit(){ editingId = null; render(); }
+function submitEdit(id){
+  const name = document.getElementById(`edit-name-${id}`).value;
+  const value = document.getElementById(`edit-freqval-${id}`).value;
+  const unit = document.getElementById(`edit-frequnit-${id}`).value;
+  const due = document.getElementById(`edit-due-${id}`).value;
+  const freqDays = daysFromUnit(value, unit);
+  saveEdit(id, name, freqDays, due);
+}
+
+function openMove(id){
+  editingId = null;
+  const task = tasks.find(x=>x.id===id);
+  const container = document.getElementById('app');
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay';
+  wrap.innerHTML = `<div class="sheet">
+    <h2>Move "${escapeHtml(task.name)}"</h2>
+    <div class="field">
+      <label>New due date</label>
+      <input type="date" id="move-date" value="${task.nextDue}">
+    </div>
+    <div class="row-btns">
+      <button class="btn btn-primary" id="move-save">Save</button>
+      <button class="btn btn-ghost" id="move-cancel">Cancel</button>
+    </div>
+  </div>`;
+  container.appendChild(wrap);
+  document.getElementById('move-cancel').onclick = () => wrap.remove();
+  document.getElementById('move-save').onclick = () => {
+    const newDate = document.getElementById('move-date').value;
+    if(newDate){ task.nextDue = newDate; saveTasks(); }
+    wrap.remove();
+    render();
+  };
+}
+
+function openAddSheet(){
+  const container = document.getElementById('app');
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay';
+  wrap.innerHTML = `<div class="sheet">
+    <h2>New task</h2>
+    <div class="field">
+      <label>Task name</label>
+      <input type="text" id="add-name" placeholder="e.g. Mop kitchen floor">
+    </div>
+    <div class="freq-row">
+      <div class="field">
+        <label>Frequency</label>
+        <input type="number" min="1" id="add-freqval" value="7">
+      </div>
+      <div class="field">
+        <label>Unit</label>
+        <select id="add-frequnit">
+          <option value="day">Day(s)</option>
+          <option value="week" selected>Week(s)</option>
+          <option value="month">Month(s)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Starting due date</label>
+      <input type="date" id="add-due" value="${todayStr()}">
+    </div>
+    <div class="row-btns">
+      <button class="btn btn-primary" id="add-save">Add task</button>
+      <button class="btn btn-ghost" id="add-cancel">Cancel</button>
+    </div>
+  </div>`;
+  container.appendChild(wrap);
+  document.getElementById('add-cancel').onclick = () => wrap.remove();
+  document.getElementById('add-save').onclick = () => {
+    const name = document.getElementById('add-name').value.trim();
+    if(!name) return;
+    const value = document.getElementById('add-freqval').value;
+    const unit = document.getElementById('add-frequnit').value;
+    const due = document.getElementById('add-due').value || todayStr();
+    const freqDays = daysFromUnit(value, unit);
+    addTask(name, freqDays, due);
+    wrap.remove();
+  };
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+function render(){
+  const t = todayStr();
+  const todayCount = tasks.filter(x=>daysBetween(t,x.nextDue)<=0).length;
+  const soonCount = tasks.filter(x=>daysBetween(t,x.nextDue)<=14).length;
+  const list = filteredTasks();
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header>
+      <h1>Tidy Cycle</h1>
+      <p>Your rotating cleaning list</p>
+    </header>
+    <div class="tabs">
+      <button class="tab ${view==='today'?'active':''}" onclick="setView('today')">Due Today<span class="count-pill">${todayCount}</span></button>
+      <button class="tab ${view==='soon'?'active':''}" onclick="setView('soon')">Next 14 Days<span class="count-pill">${soonCount}</span></button>
+      <button class="tab ${view==='all'?'active':''}" onclick="setView('all')">All<span class="count-pill">${tasks.length}</span></button>
+    </div>
+    <div class="backup-bar">
+      <button class="backup-link" onclick="openExport()">Export backup</button>
+      <button class="backup-link" onclick="openImport()">Import backup</button>
+    </div>
+    <div id="list">
+      ${list.length === 0 ? `<div class="empty"><div class="glyph">✨</div>Nothing here — you're caught up.</div>` : renderGroupedList(list)}
+    </div>
+    <button class="fab" onclick="openAddSheet()">${iconPlus()} Add task</button>
+  `;
+}
+
+function renderGroupedList(list){
+  let html = '';
+  let currentDate = null;
+  for(const task of list){
+    if(task.nextDue !== currentDate){
+      currentDate = task.nextDue;
+      html += `<div class="date-header">${groupHeaderLabel(currentDate)}</div>`;
+    }
+    html += renderTask(task);
+  }
+  return html;
+}
+
+function setView(v){ view = v; editingId = null; render(); }
+
+// expose functions used by inline handlers
+window.completeTask = completeTask;
+window.deleteTask = deleteTask;
+window.openEdit = openEdit;
+window.cancelEdit = cancelEdit;
+window.submitEdit = submitEdit;
+window.openMove = openMove;
+window.openAddSheet = openAddSheet;
+function openExport(){
+  const container = document.getElementById('app');
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay';
+  wrap.innerHTML = `<div class="sheet">
+    <h2>Export backup</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:-6px;">Copy this text somewhere safe (notes app, email to yourself). You can paste it back in later via Import.</p>
+    <textarea class="backup-textarea" readonly onclick="this.select()">${escapeHtml(JSON.stringify(tasks))}</textarea>
+    <div class="row-btns">
+      <button class="btn btn-primary" id="export-close">Done</button>
+    </div>
+  </div>`;
+  container.appendChild(wrap);
+  document.getElementById('export-close').onclick = () => wrap.remove();
+}
+
+function openImport(){
+  const container = document.getElementById('app');
+  const wrap = document.createElement('div');
+  wrap.className = 'overlay';
+  wrap.innerHTML = `<div class="sheet">
+    <h2>Import backup</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:-6px;">Paste a backup you exported earlier. This replaces your current list.</p>
+    <textarea class="backup-textarea" id="import-text" placeholder="Paste backup text here"></textarea>
+    <div class="row-btns">
+      <button class="btn btn-primary" id="import-save">Import</button>
+      <button class="btn btn-ghost" id="import-cancel">Cancel</button>
+    </div>
+  </div>`;
+  container.appendChild(wrap);
+  document.getElementById('import-cancel').onclick = () => wrap.remove();
+  document.getElementById('import-save').onclick = () => {
+    const text = document.getElementById('import-text').value.trim();
+    try{
+      const parsed = JSON.parse(text);
+      if(!Array.isArray(parsed)) throw new Error('Not a task list');
+      tasks = parsed;
+      saveTasks();
+      wrap.remove();
+      render();
+    } catch(e){
+      alert('That backup text could not be read. Make sure you pasted the full export.');
+    }
+  };
+}
+
+window.openExport = openExport;
+window.openImport = openImport;
+window.setView = setView;
+
+loadTasks();
+</script>
+</body>
+</html>
